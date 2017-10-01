@@ -1,0 +1,54 @@
+-*- utf-8 -*-
+###北极星招聘爬取###
+
+import requests
+import csv
+from bs4 import BeautifulSoup
+import time
+
+def GetHtmlTxt(url,i=1,proxy="",headers={"User-Agent":"Mozilla/5.0"}):
+    try:
+        r=requests.get(url,params={"page":i,},proxies=proxy)
+        r.raise_for_status()
+        r.encoding="GB2312"
+        return r.text
+    except requests.RequestException as e:
+        print(e)
+        return "12"
+def DownHtml(str,address="job.csv"):
+    with open(address,"w",encoding="utf-8",newline="") as jt: 
+        writer=csv.writer(jt)
+        writer.writerows(str)
+       
+
+def ParserHtml(HtmlTxt,JobList=[],TypeOfEnergy="fd"):
+    Soup=BeautifulSoup(HtmlTxt,"html.parser")
+    for i in Soup.find_all("ul",attrs={"class":"steps_line2"}):
+        Job,JobId=i.select("a")[0]["title"],i.select("a")[0]["href"]
+        Company,CompanyId=i.select("a")[1]["title"],i.select("a")[1]["href"]
+        JobAddress = i.find("li", attrs={"class": "sepc3"}).string
+        Education=i.find("li",attrs={"class":"sepc4"}).string
+        WorkTime=i.find("li",attrs={"class":"sepc5"}).string
+        Update = i.find("li", attrs={"class": "sepc6"}).string
+        JobList.append([Job,"http://{}job.bjx.com.cn".format(TypeOfEnergy)+JobId,Company,"http://{}job.bjx.com.cn".format(TypeOfEnergy)+CompanyId,JobAddress,Education,WorkTime,Update])
+
+    return JobList
+
+def main(TypeOfEnergy="fd"):
+    TOEList=["fd","gf","hb","dq","hd"]
+    st=[["职位","职位网址","公司","公司网址","地点","学历","经验","更新时间"]]
+    proxy=['HTTP://58.246.59.59:8080', 'HTTP://27.213.64.209:8118', 'HTTP://182.88.125.205:8118', 'HTTP://218.15.25.153:808', 'HTTP://123.52.84.59:8118', 'HTTP://115.200.175.202:80', 'HTTP://121.231.147.207:808', 'HTTP://42.243.78.204:8080', 'HTTP://171.214.204.188:8118', 'HTTP://1.183.152.252:80', 'HTTP://14.157.121.42:8998', 'HTTP://27.159.127.197:8118', 'HTTP://183.145.171.200:80', 'HTTP://219.142.211.165:8118']
+    TypeOfEnergy=input("输入爬取岗位大类(eg:(fd:风电,gf:光伏,hd:火电,hb:环保))：")
+    if not TypeOfEnergy in TOEList:
+        print("输入岗位大类错误")
+        exit()
+    for i in range(1,51):
+        print("正在爬取第{}页".format(i))
+        HtmlTxt=GetHtmlTxt("http://{}job.bjx.com.cn/SearchResult.aspx?".format(TypeOfEnergy),i,proxy)  #gfjob光伏fd风电
+        st=ParserHtml(HtmlTxt,st,TypeOfEnergy)
+    DownHtml(st,"{}job{}.csv".format(TypeOfEnergy,time.strftime('%Y%m%d')))
+
+if __name__=="__main__" :
+    start_time=time.time()
+    main()
+    print("共用时{}s".format(time.time()-start_time))
